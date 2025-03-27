@@ -165,7 +165,7 @@ numeroTelefono = numeroTelefono.replace(/[^0-9]/g, '')
 if (numeroTelefono.match(/^\d+$/) && Object.keys(PHONENUMBER_MCC).some(v => numeroTelefono.startsWith(v))) {
 break 
 } else {
-console.log(chalk.bgBlack(chalk.bold.greenBright(`〘 ACCESS 〙Por favor, ingrese su numero de telefono para vincularse.\n${chalk.bold.yellowBrigth(`Por ejemplo:`} +5493873655135`)))
+console.log(chalk.bgBlack(chalk.bold.greenBright(`〘 ACCESS 〙Por favor, ingrese su numero de telefono para vincularse.\n${chalk.bold.yellowBrigth(`Por ejemplo:`)} +5493873655135`)))
 }}
 rl.close()  
 } 
