@@ -5,7 +5,8 @@ import {createRequire} from 'module';
 import path, {join} from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
 import {platform} from 'process';
-import {readdirSync, statSync, unlinkSync, existsSync, readFileSync, watch} from 'fs';
+import fs, { watchFile, unwatchFile, writeFileSync, readdirSync, statSync, unlinkSync, existsSync, readFileSync, copyFileSync, watch, rmSync, readdir, stat, mkdirSync, rename } from 'fs';
+//import {readdirSync, statSync, unlinkSync, existsSync, readFileSync, watch} from 'fs';
 import yargs from 'yargs';
 import {spawn} from 'child_process';
 import lodash from 'lodash';
@@ -100,6 +101,7 @@ loadChatgptDB();
 
 /* ------------------------------------------------*/
 
+global.authFile = 'MdmxSesion';
 
 const {state, saveCreds} = await useMultiFileAuthState('MdmxSesion');
 
@@ -116,7 +118,7 @@ let opcion
 if (methodCodeQR) {
 opcion = '1'
 }
-if (!methodCodeQR && !methodCode && !fs.existsSync(`./MdmxSesion/creds.json`)) {
+if (!methodCodeQR && !methodCode && !fs.existsSync(`./${global.authFile}/creds.json`)) {
 do {
 opcion = await question('⫶☰ SELECCIONE UNA OPCION VALIDA\n● 1 ). Escanear un codigo QR.\n● 2 ). Vicular con un codigo de 8 digitos.\n---> ')
 if (!/^[1-2]$/.test(opcion)) {
