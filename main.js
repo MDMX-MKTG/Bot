@@ -159,7 +159,7 @@ console.log(chalk.bgBlack(chalk.bold.greenBright(`〘 ACCESS 〙Ingrese su numer
 process.exit(0)
 }} else {
 while (true) {
-numeroTelefono = await question(chalk.bgBlack(chalk.bold.greenBright(`〘 ACCESS 〙Por favor, ingrese su numero de telefono para vincularse.\n${chalk.bold.yellowBrigth(`Por ejemplo:`} +5493873655135`)))
+numeroTelefono = await question(chalk.bgBlack(chalk.bold.greenBright(`〘 ACCESS 〙Por favor, ingrese su numero de telefono para vincularse.\n${chalk.bold.yellowBrigth(`Por ejemplo:`)} +5493873655135`)))
 numeroTelefono = numeroTelefono.replace(/[^0-9]/g, '')
 
 if (numeroTelefono.match(/^\d+$/) && Object.keys(PHONENUMBER_MCC).some(v => numeroTelefono.startsWith(v))) {
