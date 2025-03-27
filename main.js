@@ -18,7 +18,7 @@ import {Boom} from '@hapi/boom';
 import {makeWASocket, protoType, serialize} from './library/simple.js';
 import {Low, JSONFile} from 'lowdb';
 import store from './library/store.js';
-const {DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, jidNormalizedUser, PHONENUMBER_MCC} = await import("baileys");
+const {DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, jidNormalizedUser, PHONENUMBER_MCC} = await import("@whiskeysockets/baileys");
 import readline from 'readline';
 import NodeCache from 'node-cache';
 const {chain} = lodash;
