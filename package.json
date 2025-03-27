@@ -5,8 +5,8 @@
 "main": "index.js",
 "type": "module",
 "directories": {
-"library": "library",
-"archivos": "archivos",
+"lib": "library",
+"src": "archivo",
 "plugins": "plugins"
 },
 "scripts": {
