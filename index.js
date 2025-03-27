@@ -1,77 +1,61 @@
-import { join, dirname } from 'path' 
-import { createRequire } from "module";
+import { join, dirname } from 'path'
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url'
 import { setupMaster, fork } from 'cluster'
 import { watchFile, unwatchFile } from 'fs'
 import cfonts from 'cfonts';
-import chalk from "chalk"
 import { createInterface } from 'readline'
 import yargs from 'yargs'
+import express from 'express'
+import chalk from 'chalk'
+import path from 'path'
+import os from 'os'
+import { promises as fsPromises } from 'fs'
+
+// https://stackoverflow.com/a/50052194
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const require = createRequire(__dirname) 
-const { name, author } = require(join(__dirname, './package.json')) 
+const require = createRequire(__dirname) //Incorpora la capacidad de crear el método 'requerir'
+const { name, author } = require(join(__dirname, './package.json')) //https://www.stefanjudis.com/snippets/how-to-import-json-files-in-es-modules-node-js/
 const { say } = cfonts
 const rl = createInterface(process.stdin, process.stdout)
 
-try {
-function getRandomColor() {
-const colors = ['system', 'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'gray', 'redBright', 'greenBright', 'yellowBright', 'blueBright', 'magentaBright', 'cyanBright', 'whiteBright', 'candy'];
-const randomIndex = Math.floor(Math.random() * colors.length);
-return colors[randomIndex]}
+//const app = express()
+//const port = process.env.PORT || 8080;
 
-function getRandomHexColor() {
-const hexColors = ['#3456ff', '#f80', '#f00808', '#fefe62', '#ff00ff', '#00ffff', '#ffffff', '#00ff00', '#8b00ff', '#ff5733', '#00ced1']
-const randomIndex = Math.floor(Math.random() * hexColors.length)
-return hexColors[randomIndex]}
-
-const options = {
- font: 'block',
- align: 'center',
- colors: getRandomGradient(),
- background: 'transparent',
- letterSpacing: 1,
- lineHeight: 1,
- space: true,
- maxLength: '0',
-}
-
-function getRandomGradient() {  
-const useRandomHexColors = Math.random() < 0.5; // 50% colors
-if (useRandomHexColors) {
-return [getRandomHexColor(), getRandomHexColor()]
-} else {
-return [getRandomColor(), getRandomColor()];
-}}
-cfonts.say('Bot'.trim(), options)
-
-} catch (err) {
 say('Bot', {
- font: 'chrome',
- align: 'center',
- gradient: ['red', 'magenta']
-})}
+font: 'block',
+align: 'center',
+gradient: ['red', 'blue']})
+say(`Creado por @mdmx_mktg`, {
+font: 'console',
+align: 'center',
+gradient: ['red', 'blue']})
 
-say(`Creado para ( Jose ) por ( @mdmx_mktg )`.trim(), {
- font: 'console',
- align: 'center',
- colors: ['candy']
+var isRunning = false
+
+process.on('uncaughtException', (err) => {
+if (err.code === 'ENOSPC') {
+console.error('Se ha detectado ENOSPC (sin espacio o límite de watchers alcanzado), reiniciando....')
+} else {
+console.error('Error no capturado:', err)
+}
+process.exit(1)
 })
 
-let isRunning = false
-/**
-* Start a js file
-* @param {String} file `path/to/file`
-*/
-function start(file) {
+async function start(file) {
 if (isRunning) return
 isRunning = true
-const args = [join(__dirname, file), ...process.argv.slice(2)]
-
-setupMaster({
-exec: args[0],
-args: args.slice(1)})
-const p = fork()
-p.on('message', (data) => {
+const currentFilePath = new URL(import.meta.url).pathname
+let args = [join(__dirname, file), ...process.argv.slice(2)]
+say([process.argv[0], ...args].join(' '), {
+font: 'console',
+align: 'center',
+gradient: ['red', 'magenta']
+})
+setupMaster({exec: args[0], args: args.slice(1),
+})
+let p = fork()
+p.on('message', data => {
 switch (data) {
 case 'reset':
 p.process.kill()
@@ -81,24 +65,43 @@ break
 case 'uptime':
 p.send(process.uptime())
 break
-}
-})
-p.on('exit', (_, code) => {
-isRunning = false;
-console.error('CODIGO ERRONEO >> ', code)
-p.process.kill()
-isRunning = false
-start.apply(this, arguments)
-if (process.env.pm_id) {
-process.exit(1)
-} else {
-process.exit()
 }})
-const opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
-if (!opts['test']) {
-if (!rl.listenerCount()) {
-rl.on('line', (line) => {
+
+p.on('exit', (_, code) => {
+isRunning = false
+console.error('ERROR >> ', code)
+start('main.js'); //
+
+if (code === 0) return
+watchFile(args[0], () => {
+unwatchFile(args[0])
+start(file)
+})})
+
+const ramInGB = os.totalmem() / (1024 * 1024 * 1024)
+const freeRamInGB = os.freemem() / (1024 * 1024 * 1024)
+const packageJsonPath = path.join(path.dirname(currentFilePath), './package.json')
+try {
+const packageJsonData = await fsPromises.readFile(packageJsonPath, 'utf-8')
+const packageJsonObj = JSON.parse(packageJsonData)
+const currentTime = new Date().toLocaleString()
+console.log(chalk.yellow(`
+${chalk.greenBright('┌────────────────۰')}
+${chalk.greenBright('│')} ${chalk.blueBright('INFORMACION')} 
+${chalk.greenBright('│')}${chalk.cyan(`Nombre: ${packageJsonObj.name}`)}
+${chalk.greenBright('│')}${chalk.cyan(`Versión: ${packageJsonObj.version}`)}
+${chalk.greenBright('└────────────────۰')} 
+`));
+setInterval(() => {}, 1000)
+} catch (err) {
+console.error(chalk.red(`No se pudo leer el archivo package.json: ${err}`))
+}
+
+let opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
+if (!opts['test'])
+if (!rl.listenerCount()) rl.on('line', line => {
 p.emit('message', line.trim())
-})
-}}}
+})}
+
 start('main.js')
+       
