@@ -101,7 +101,6 @@ loadChatgptDB();
 
 /* ------------------------------------------------*/
 
-global.authFile = 'MdmxSesion';
 
 const {state, saveCreds} = await useMultiFileAuthState('MdmxSesion');
 
@@ -118,7 +117,7 @@ let opcion
 if (methodCodeQR) {
 opcion = '1'
 }
-if (!methodCodeQR && !methodCode && !fs.existsSync(`./${global.authFile}/creds.json`)) {
+if (!methodCodeQR && !methodCode && !fs.existsSync(`./MdmxSesion/creds.json`)) {
 do {
 opcion = await question('⫶☰ SELECCIONE UNA OPCION VALIDA\n● 1 ). Escanear un codigo QR.\n● 2 ). Vicular con un codigo de 8 digitos.\n---> ')
 if (!/^[1-2]$/.test(opcion)) {
