@@ -5,7 +5,7 @@ import path, {join} from 'path'
 import {fileURLToPath, pathToFileURL} from 'url'
 import {platform} from 'process'
 import * as ws from 'ws'
-import fs, {readdirSync, statSync, unlinkSync, existsSync, mkdirSync, readFileSync, rmSync, watch} from 'fs'
+import {readdirSync, statSync, unlinkSync, existsSync, readFileSync, rmSync, watch} from 'fs'
 import yargs from 'yargs';
 import {spawn} from 'child_process'
 import lodash from 'lodash'
@@ -48,7 +48,7 @@ global.timestamp = {start: new Date}
 const __dirname = global.__dirname(import.meta.url)
 
 global.opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
-global.prefix = new RegExp('^[#/!.]')
+global.prefix = new RegExp('^[/.$#!]')
 // global.opts['db'] = process.env['db']
 
 global.db = new Low(/https?:\/\//.test(opts['db'] || '') ? new cloudDBAdapter(opts['db']) : new JSONFile('src/database/database.json'))
@@ -79,7 +79,7 @@ global.db.chain = chain(global.db.data)
 }
 loadDatabase()
 
-const {state, saveState, saveCreds} = await useMultiFileAuthState('MdmxSesion')
+const {state, saveState, saveCreds} = await useMultiFileAuthState(global.sessions)
 const msgRetryCounterMap = (MessageRetryMap) => { };
 const msgRetryCounterCache = new NodeCache()
 const {version} = await fetchLatestBaileysVersion();
@@ -88,9 +88,9 @@ let phoneNumber = global.botNumberCode
 const methodCodeQR = process.argv.includes("qr")
 const methodCode = !!phoneNumber || process.argv.includes("code")
 const MethodMobile = process.argv.includes("mobile")
-const colores = chalk.bgMagenta.white
-const opcionQR = chalk.bold.green
-const opcionTexto = chalk.bold.cyan
+const colores = chalk.bgGreen.white
+const opcionQR = chalk.bold.cyanBright
+const opcionTexto = chalk.bold.cyanBright
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 const question = (texto) => new Promise((resolver) => rl.question(texto, resolver))
 
@@ -100,10 +100,10 @@ opcion = '1'
 }
 if (!methodCodeQR && !methodCode && !fs.existsSync(`./MdmxSesion/creds.json`)) {
 do {
-opcion = await question(colores('SELECCIONE UNA OPCION PARA CONTINUAR\n') + opcionQR('1 » Escanear un codigo QR.\n') + opcionTexto('2 » Vincular con codigo de 8 digitos.\n--> '))
+opcion = await question(colores('SELECCIONE UNA OPCION\n') + opcionQR('1. Con código QR\n') + opcionTexto('2. Con código de texto de 8 dígitos\n'))
 
 if (!/^[1-2]$/.test(opcion)) {
-console.log(chalk.bold.redBright(`Ocurrio un error, intentalo de nuevo por favor..`))
+console.log(chalk.bold.redBright(`ERROR, VUELVA A INTENTARLO`))
 }} while (opcion !== '1' && opcion !== '2' || fs.existsSync(`./MdmxSesion/creds.json`))
 } 
 
@@ -116,29 +116,31 @@ const filterStrings = [
 "RGVjcnlwdGVkIG1lc3NhZ2U=" // "Decrypted message" 
 ]
 
-
+console.info = () => {} 
+console.debug = () => {} 
+['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
 
 const connectionOptions = {
 logger: pino({ level: 'silent' }),
 printQRInTerminal: opcion == '1' ? true : methodCodeQR ? true : false,
 mobile: MethodMobile, 
-browser: opcion == '1' ? ['MDMX', 'Edge', '20.0.04'] : methodCodeQR ? ['MDMX', 'Edge', '20.0.04'] : ["Ubuntu", "Chrome", "20.0.04"],
+browser: opcion == '1' ? [`MDMX`, 'Edge', '20.0.04'] : methodCodeQR ? [`MDMX`, 'Edge', '20.0.04'] : ['Ubuntu', 'Chrome', '20.0.04'], 
 auth: {
 creds: state.creds,
-keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
+keys: makeCacheableSignalKeyStore(state.keys, Pino({ level: "fatal" }).child({ level: "fatal" })),
 },
-markOnlineOnConnect: true,
-generateHighQualityLinkPreview: true,
+markOnlineOnConnect: true, 
+generateHighQualityLinkPreview: true, 
 getMessage: async (clave) => {
-let jid = jidNormalizedUser(clave.remoteJid);
-let msg = await store.loadMessage(jid, clave.id);
-return msg?.message || "";
+let jid = jidNormalizedUser(clave.remoteJid)
+let msg = await store.loadMessage(jid, clave.id)
+return msg?.message || ""
 },
-msgRetryCounterCache,
-msgRetryCounterMap,
+msgRetryCounterCache, // Resolver mensajes en espera
+msgRetryCounterMap, // Determinar si se debe volver a intentar enviar un mensaje o no
 defaultQueryTimeoutMs: undefined,
-version: [2, 3000, 1015901307]
-};
+version: [2, 3000, 1015901307],
+}
 
 global.conn = makeWASocket(connectionOptions);
 
@@ -147,23 +149,23 @@ if (opcion === '2' || methodCode) {
 
 opcion = '2'
 if (!conn.authState.creds.registered) {  
-if (MethodMobile) throw new Error('No puedes usar un codigo de emparejamiento...')
+if (MethodMobile) throw new Error('No se puede usar un código de emparejamiento con la API móvil')
 
 let numeroTelefono
 if (!!phoneNumber) {
 numeroTelefono = phoneNumber.replace(/[^0-9]/g, '')
 if (!Object.keys(PHONENUMBER_MCC).some(v => numeroTelefono.startsWith(v))) {
-console.log(chalk.bgBlack(chalk.bold.greenBright(`Ingrese su numero de WhatsApp por favor.\n${chalk.bold.yellowBright(`Por ejemplo:`)} +5493873655135\n${chalk.bold.yellowBright('---> ')}`)))
+console.log(chalk.bgBlack(chalk.bold.greenBright(`〘 ACCESS 〙Ingrese su numero de telefono para vincular.\n${chalk.bold.yellowBright(`Por ejemplo:`)} +5493873655135\n`)))
 process.exit(0)
 }} else {
 while (true) {
-numeroTelefono = await question(chalk.bgBlack(chalk.bold.greenBright(`Ingrese su numero de WhatsApp para continuar..\nPor ejemplo: +5493873655135\n-- >`)))
+numeroTelefono = await question(chalk.bgBlack(chalk.bold.greenBright(`〘 ACCESS 〙Por favor, ingrese su numero de telefono para vincularse.\n${chalk.bold.yellowBrigth(`Por ejemplo:`} +5493873655135`)))
 numeroTelefono = numeroTelefono.replace(/[^0-9]/g, '')
 
 if (numeroTelefono.match(/^\d+$/) && Object.keys(PHONENUMBER_MCC).some(v => numeroTelefono.startsWith(v))) {
 break 
 } else {
-console.log(chalk.bgBlack(chalk.bold.greenBright(`Debe de ingresar su numero de WhatsApp completo para continuar.\nPor ejemplo: +5493873655135\n--> `)))
+console.log(chalk.bgBlack(chalk.bold.greenBright(`〘 ACCESS 〙Por favor, ingrese su numero de telefono para vincularse.\n${chalk.bold.yellowBrigth(`Por ejemplo:`} +5493873655135`)))
 }}
 rl.close()  
 } 
@@ -179,11 +181,12 @@ console.log(chalk.bold.white(chalk.bgGreen(`CODIGO:`)), chalk.bold.white(chalk.w
 conn.isInit = false;
 conn.well = false;
 
+
 if (!opts['test']) {
 if (global.db) setInterval(async () => {
 if (global.db.data) await global.db.write()
 if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [os.tmpdir(), 'tmp', `MdmxDirector`], tmp.forEach((filename) => cp.spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'])));
-}, 30 * 1000);
+}, 60 * 1000);
 }
 
 if (opts['server']) (await import('./server.js')).default(global.conn, PORT);
@@ -200,34 +203,34 @@ global.timestamp.connect = new Date;
 if (global.db.data == null) loadDatabase();
 if (update.qr != 0 && update.qr != undefined || methodCodeQR) {
 if (opcion == '1' || methodCodeQR) {
-console.log(chalk.bold.green(`\nEscanee el codigo QR, el tiempo de expiracion es en 40 segundos....`))}
+console.log(chalk.bold.green(`〘 INFO 〙Escanee el codigo QR, expira mediante 45 segundos...`))}
 }
 if (connection == 'open') {
-console.log(boxen(chalk.bold(' ✓ ¡Se ha conectado a WhatsApp con exito! '), { borderStyle: 'round', borderColor: 'green', title: chalk.green.bold('● CONEXIÓN ●'), titleAlignment: '', float: '' }))
+console.log(boxen(chalk.bold(' CONEXION EXITOSA '), { borderStyle: 'round', borderColor: 'green', title: chalk.green.bold('● CONEXIÓN ●'), titleAlignment: '', float: '' }))
 await joinChannels(conn)}
 let reason = new Boom(lastDisconnect?.error)?.output?.statusCode
 if (connection === 'close') {
 if (reason === DisconnectReason.badSession) {
-console.log(chalk.bold.cyanBright(`\n( ⦸ ): No tienes conexion a la sesion predeterminada, borra la carpera ( MdmxSesion ) y vuelva a intentar escanear qr o code.`))
+console.log(chalk.bold.cyanBright(`\n〘 ERROR 〙Conexion erronea, elimina la carpeta MdmxSesion y vuelva a escanear o pedir code.`))
 } else if (reason === DisconnectReason.connectionClosed) {
-console.log(chalk.bold.magentaBright(`\n( ⦸ ): Se ha cerrado la conexion, esto puede ser que la cuenta esta en soporte o fue eliminada...`))
+console.log(chalk.bold.magentaBright(`\n〘 ERROR 〙Se ha cerrado la conexion, se intentara reconectar...`))
 await global.reloadHandler(true).catch(console.error)
 } else if (reason === DisconnectReason.connectionLost) {
-console.log(chalk.bold.blueBright(`\n( ⦸ ): Se ha perdido la conexion con el servidor, se intentara reconectar, espere un momento...`))
+console.log(chalk.bold.blueBright(`\n〘 ERROR 〙Conexion perdida con el servidor, reconectando...`))
 await global.reloadHandler(true).catch(console.error)
 } else if (reason === DisconnectReason.connectionReplaced) {
-console.log(chalk.bold.yellowBright(`\n( ⦸ ): Se ha reemplazado la conexion, borre la nueva sesion para evitar errores en esta sesion.`))
+console.log(chalk.bold.yellowBright(`\n〘 ERROR 〙Vinculacion reemplazada, borre la sesion reciente para conservar esta sesion para evitar errores.`))
 } else if (reason === DisconnectReason.loggedOut) {
-console.log(chalk.bold.redBright(`\n( ⦸ ): No tienes conexion a la sesion predeterminada, borra la carpeta ( MdmxSesion ) y vuelva a intentar escanear qr o code.`))
+console.log(chalk.bold.redBright(`\n〘 ERROR 〙Conexion erronea, borre la carpera MdmxSesion y vuelva a escanear o pedir code.`))
 await global.reloadHandler(true).catch(console.error)
 } else if (reason === DisconnectReason.restartRequired) {
-console.log(chalk.bold.redBright(`\n( ⦸ ): Ocurrio un error, se intentara conectar al servidor.`))
+console.log(chalk.bold.cyanBright(`\n〘 ACCESS 〙Conexion exitosa con el servidor, cargando mensajes...`))
 await global.reloadHandler(true).catch(console.error)
 } else if (reason === DisconnectReason.timedOut) {
-console.log(chalk.bold.blueBright(`\n( ⦸ ): Tiempo de conexion caducada, intenta de nuevo pedir codigo qr o code.`))
+console.log(chalk.bold.yellowBright(`\n〘 ERROR 〙Tiempo de conexion agotada, intentalo de nuevo, borra la carpeta MdmxSesion si este existe para volver a escanear o pedir code.`))
 await global.reloadHandler(true).catch(console.error) //process.send('reset')
 } else {
-console.log(chalk.bold.redBright(`\n( ⦸ ): Se ha desconectado sin razon.\nRazon: ${reason || 'Desconocida.'}\nDesconexion: ${connection || 'Desconocida.'}`))
+console.log(chalk.bold.redBright(`\n〘 ERROR 〙 ${reason || 'No encontrado'} >> ${connection || 'No encontrado'}`))
 }}
 }
 process.on('uncaughtException', console.error)
@@ -275,33 +278,6 @@ conn.ev.on('creds.update', conn.credsUpdate)
 isInit = false
 return true
 };
-
-/** Arranque nativo para subbots by - ReyEndymion >> https://github.com/ReyEndymion
- */
-global.rutaJadiBot = join(__dirname, './MdmxDirector')
-
-/*
-if (global.mdmxBots) {
-if (!existsSync(global.rutaJadiBot)) {
-mkdirSync(global.rutaJadiBot, { recursive: true }) 
-console.log(chalk.bold.green(`✓ ¡Se ha creado la carpeta ( MdmxDirector ) con exito!.`))
-} else {
-console.log(chalk.bold.yellow(`La carpeta ( MdmxDirector ) ya existe, no hace falta crearla de nuevo.`)) 
-}
-
-const readRutaJadiBot = readdirSync(rutaJadiBot)
-if (readRutaJadiBot.length > 0) {
-const creds = 'creds.json'
-for (const gjbts of readRutaJadiBot) {
-const botPath = join(rutaJadiBot, gjbts)
-const readBotPath = readdirSync(botPath)
-if (readBotPath.includes(creds)) {
-mdmxBots({pathMdmxBotsWa: botPath, m: null, conn, args: '', usedPrefix: '/', command: 'mxrent'})
-}
-}
-}
-}
-*/
 
 const pluginFolder = global.__dirname(join(__dirname, './plugins/index'))
 const pluginFilter = (filename) => /\.js$/.test(filename)
@@ -388,46 +364,7 @@ prekey = [...prekey, ...filesFolderPreKeys]
 filesFolderPreKeys.forEach(files => {
 unlinkSync(`./MdmxSesion/${files}`)
 })
-} 
-
-function purgeSessionSB() {
-try {
-const listaDirectorios = readdirSync(`./MdmxDirector/`);
-let SBprekey = [];
-listaDirectorios.forEach(directorio => {
-if (statSync(`./MdmxDirector/${directorio}`).isDirectory()) {
-const DSBPreKeys = readdirSync(`./MdmxDirector/${directorio}`).filter(fileInDir => {
-return fileInDir.startsWith('pre-key-')
-})
-SBprekey = [...SBprekey, ...DSBPreKeys];
-DSBPreKeys.forEach(fileInDir => {
-if (fileInDir !== 'creds.json') {
-unlinkSync(`./MdmxDirector/${directorio}/${fileInDir}`)
-}})
-}})
-if (SBprekey.length === 0) {
-console.log(chalk.bold.green(`\n✓ No hay nada en la carpeta MdmxDirector por eliminar.`))
-} else {
-console.log(chalk.bold.cyanBright(`\n✓ ¡Se han eliminado los archivos innecesarios de la carpeta ( MdmxDirector ) con exito!`))
-}} catch (err) {
-console.log(chalk.bold.red(`\n⦸ Ocurrio un error al eliminar archivos en la carpeta ( MdmxDirector )\n` + err))
-}}
-
-function purgeOldFiles() {
-const directories = [`./MdmxSesion/`, `./MdmxDirector/`]
-directories.forEach(dir => {
-readdirSync(dir, (err, files) => {
-if (err) throw err
-files.forEach(file => {
-if (file !== 'creds.json') {
-const filePath = path.join(dir, file);
-unlinkSync(filePath, err => {
-if (err) {
-console.log(chalk.bold.red(`\n( ⦸ ): No se pudo borrar el archivo ${file}\n` + err))
-} else {
-console.log(chalk.bold.green(`\n✓ ¡Se ha borrado el archivo ${file} con exito! `))
-} }) }
-}) }) }) }
+}
 
 function redefineConsoleMethod(methodName, filterStrings) {
 const originalConsoleMethod = console[methodName]
@@ -439,31 +376,62 @@ arguments[0] = ""
 originalConsoleMethod.apply(console, arguments)
 }}
 
-setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-await clearTmp()
-console.log(chalk.bold.cyanBright(`\n✓ ¡Se han eliminado los archivos innecesarios de la carpeta TMP con exito!\nSe eliminaran archivos innecesarios cada 4 minutos.`))}, 1000 * 60 * 4) // 4 min 
+function purgeSessionSB() {
+try {
+let listaDirectorios = readdirSync('./MdmxDirector/');
+let SBprekey = []
+listaDirectorios.forEach(directorio => {
+if (statSync(`./MdmxDirector/${directorio}`).isDirectory()) {
+let DSBPreKeys = readdirSync(`./MdmxDirector/${directorio}`).filter(fileInDir => {
+return fileInDir.startsWith('pre-key-')
+})
+SBprekey = [...SBprekey, ...DSBPreKeys]
+DSBPreKeys.forEach(fileInDir => {
+unlinkSync(`./MdmxDirector/${directorio}/${fileInDir}`)
+})
+}
+})
+if (SBprekey.length === 0) return null
+} catch (err) {
+}}
+
+function purgeOldFiles() {
+const directories = [`./MdmxSesion/`, `./MdmxDirector/`]
+const oneHourAgo = Date.now() - (60 * 60 * 1000)
+directories.forEach(dir => {
+readdirSync(dir, (err, files) => {
+if (err) throw err
+files.forEach(file => {
+const filePath = path.join(dir, file)
+stat(filePath, (err, stats) => {
+if (err) throw err;
+if (stats.isFile() && stats.mtimeMs < oneHourAgo && file !== 'creds.json') { 
+unlinkSync(filePath, err => {  
+if (err) throw err
+})
+} else {  
+} }) }) }) })
+}
 
 setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-await purgeSession()
-console.log(chalk.bold.cyanBright(`\n✓ ¡Se han eliminado los archivos innecesarios de la carpeta de PreBots con exito!\nCada archivo innecesario se eliminara durante 10 minutos.`))}, 1000 * 60 * 10) // 10 min
-
+  if (stopped === 'close' || !conn || !conn.user) return
+  const a = await clearTmp()
+}, 180000)
 setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-await purgeSessionSB()}, 1000 * 60 * 10) 
-
+  if (stopped === 'close' || !conn || !conn.user) return
+  await purgeSession()
+}, 1000 * 60 * 60);
 setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-await purgeOldFiles()
-console.log(chalk.bold.cyanBright(`\n✓ ¡Se han eliminado archivos innecesarios en MDMX con exito!\nCada 10 minutos se eliminaran mas.`))}, 1000 * 60 * 10)
+  if (stopped === 'close' || !conn || !conn.user) return
+  await purgeSessionSB()
+}, 1000 * 60 * 60);
+setInterval(async () => {
+  if (stopped === 'close' || !conn || !conn.user) return
+  await purgeOldFiles()
+}, 1000 * 60 * 60);
+_quickTest().then(() => conn.logger.info(chalk.bold(`Cargando mensajes...\n`.trim()))).catch(console.error)
 
-_quickTest().then(() => conn.logger.info(chalk.bold(`✅ Cargando mensajes entrantes, espere un momento...\n`.trim()))).catch(console.error)
-
-/*
 async function joinChannels(conn) {
 for (const channelId of Object.values(global.miscanales)) {
 await conn.newsletterFollow(channelId).catch(() => {})
 }}
-*/
-
