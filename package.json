@@ -11,18 +11,18 @@
 "code": "node index.js code"
 },
     
-"homepage": "https://github.com/MBMD-OFC/Bot",
+"homepage": "https://github.com/MDMX-MKTG/Bot",
 "author": { 
-"name": "MBMD-OFC" 
+"name": "MDMX-MKTG" 
 }, 
     
 "repository": { 
 "type": 
 "git", 
-"url": "git+https://github.com/MBMD-OFC/Bot.git" },
+"url": "git+https://github.com/MDMX-MKTG/Bot.git" },
  
 "bugs": {
-"url": "https://github.com/MBMD-OFC/Bot/issues" },
+"url": "https://github.com/MDMX-MKTG/Bot/issues" },
 "dependencies": {
 "@whiskeysockets/baileys": "github:ds6/bails",
 "@adiwajshing/keyed-db": "^0.2.4",
