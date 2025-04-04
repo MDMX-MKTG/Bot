@@ -20,6 +20,7 @@ global.wm = 'Bot'
 global.mxBails = 'github:ds6/bails'
 global.mxModls = '@mdmx-module'
 global.textoInfo = 'Project developed for Jose courtesy of contributor @mdmx_mktg'
+global.mdmxBots = true
 global.packname = 'WaBot'
 global.author = 'Jose'
 global.vs = '^1.0.5.ls'
